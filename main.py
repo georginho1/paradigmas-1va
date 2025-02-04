@@ -2,19 +2,17 @@ import ply.lex as lex
 import ply.yacc as yacc
 import csv
 
-# Definição dos tokens
+
 tokens = (
     'SEQID', 'SOURCE', 'TYPE', 'START', 'END', 'SCORE', 'STRAND', 'PHASE', 'ATTRIBUTE'
 )
 
 
-# Ignorar comentários
 def t_COMMENT(t):
     r'\#.*'
     pass
 
 
-# Ignorar espaços e tabulações
 t_ignore = ' '
 
 
@@ -79,7 +77,6 @@ def t_error(t):
 lexer = lex.lex()
 
 
-# Definição da gramática
 def p_gff(p):
     'gff : lines'
     p[0] = p[1]
@@ -134,5 +131,4 @@ def parse_gff(file_path, output_csv):
 
     print(f"Arquivo CSV '{output_csv}' gerado com sucesso.")
 
-# Exemplo de uso:
 parse_gff('genomic.gff', 'output.csv')
