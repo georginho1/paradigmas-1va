@@ -4,18 +4,18 @@ import csv
 
 # Definição dos tokens
 tokens = (
-    'COMMENT', 'SEQID', 'SOURCE', 'TYPE', 'START', 'END', 'SCORE', 'STRAND', 'PHASE', 'ATTRIBUTE'
+    'SEQID', 'SOURCE', 'TYPE', 'START', 'END', 'SCORE', 'STRAND', 'PHASE', 'ATTRIBUTE'
 )
 
 
+# Ignorar comentários
 def t_COMMENT(t):
     r'\#.*'
-    pass  # Ignorar linhas de comentário
+    pass
 
 
-def t_NEWLINE(t):
-    r'\n+'
-    t.lexer.lineno += len(t.value)
+# Ignorar espaços e tabulações
+t_ignore = ' '
 
 
 def t_SEQID(t):
@@ -23,20 +23,63 @@ def t_SEQID(t):
     return t
 
 
-t_SOURCE = t_TYPE = t_SCORE = t_STRAND = t_PHASE = t_ATTRIBUTE = t_SEQID
-t_START = t_END = r'\d+'
+def t_SOURCE(t):
+    r'[^\t\n]+'
+    return t
 
-t_ignore = ' \t'
+
+def t_TYPE(t):
+    r'[^\t\n]+'
+    return t
+
+
+def t_START(t):
+    r'\d+'
+    t.value = int(t.value)
+    return t
+
+
+def t_END(t):
+    r'\d+'
+    t.value = int(t.value)
+    return t
+
+
+def t_SCORE(t):
+    r'[^\t\n]+'
+    return t
+
+
+def t_STRAND(t):
+    r'[+-]'
+    return t
+
+
+def t_PHASE(t):
+    r'[012.]'
+    return t
+
+
+def t_ATTRIBUTE(t):
+    r'[^\n]+'
+    return t
+
+
+def t_newline(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
+    pass
 
 
 def t_error(t):
-    print(f"Caracter inválido: {t.value[0]}")
+    print(f"Erro léxico: Caracter inválido '{t.value[0]}' na linha {t.lineno}")
     t.lexer.skip(1)
 
 
 lexer = lex.lex()
 
 
+# Definição da gramática
 def p_gff(p):
     'gff : lines'
     p[0] = p[1]
@@ -53,11 +96,14 @@ def p_lines(p):
 
 def p_line(p):
     'line : SEQID SOURCE TYPE START END SCORE STRAND PHASE ATTRIBUTE'
-    p[0] = (p[1], p[2], p[3], int(p[4]), int(p[5]), p[6], p[7], p[8], p[9])
+    p[0] = (p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9])
 
 
 def p_error(p):
-    print("Erro de sintaxe")
+    if p:
+        print(f"Erro de sintaxe: Token inesperado '{p.value}' na linha {p.lineno}")
+    else:
+        print("Erro de sintaxe: Fim inesperado do arquivo")
 
 
 parser = yacc.yacc()
@@ -65,9 +111,21 @@ parser = yacc.yacc()
 
 def parse_gff(file_path, output_csv):
     with open(file_path, 'r') as file:
-        data = file.readlines()
+        data = [line.strip() for line in file.readlines() if not line.startswith('#') and line.strip()]
 
-    parsed_data = parser.parse(''.join(data))
+    print("Iniciando parsing do arquivo...")
+    parsed_data = []
+
+    for line in data:
+        fields = line.split('\t')
+        if len(fields) != 9:
+            print(f"Linha ignorada (número incorreto de colunas): {line}")
+            continue
+        parsed_data.append(tuple(fields))
+
+    if not parsed_data:
+        print("Erro: Nenhum dado foi extraído do arquivo GFF.")
+        return
 
     with open(output_csv, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -77,4 +135,4 @@ def parse_gff(file_path, output_csv):
     print(f"Arquivo CSV '{output_csv}' gerado com sucesso.")
 
 # Exemplo de uso:
-# parse_gff('input.gff', 'output.csv')
+parse_gff('genomic.gff', 'output.csv')
